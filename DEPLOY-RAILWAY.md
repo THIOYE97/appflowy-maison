@@ -110,5 +110,11 @@ tentative d'inscription renvoie `signup_disabled`. Pour ajouter quelqu'un, il
 faut repasser temporairement la variable à `false`, ou inviter depuis l'espace
 de travail.
 
-Les identifiants vivent dans `.secrets.local`, ignoré par git. Ils ne sont
-nulle part dans l'historique du dépôt.
+Les identifiants vivent dans `~/.config/appflowy-maison/secrets.env`, **hors du
+dépôt**. Un `.gitignore` ne suffisait pas : l'outil d'instantanés local forçait
+l'ajout du fichier et le capturait malgré tout. Les hors-dépôt, il ne peut plus
+l'atteindre. Aucun secret n'est présent dans l'historique.
+
+```bash
+set -a; . ~/.config/appflowy-maison/secrets.env; set +a
+```
