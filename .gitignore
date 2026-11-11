@@ -24,3 +24,6 @@ flake.lock
 
 docker-compose.override.yml
 .serena
+
+# Secrets de déploiement locaux (jamais versionnés)
+.secrets.local
