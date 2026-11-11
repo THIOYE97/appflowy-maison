@@ -17,18 +17,22 @@ on:
       public_host:
         description: "Public base URL baked into the web image (no trailing slash)"
         required: false
-        default: "https://edge-production-02c51086.up.railway.app"
+        default: "https://edge-production-cc0fa50a.up.railway.app"
       tag:
         description: "Image tag to push"
         required: false
         default: "v2025.07-1"
+      only:
+        description: "Comma-separated jobs to run (cloud,worker,admin,web,edge). Empty = all."
+        required: false
+        default: ""
 
 permissions:
   contents: read
   packages: write
 
 env:
-  PUBLIC_HOST: ${{ github.event.inputs.public_host || 'https://edge-production-02c51086.up.railway.app' }}
+  PUBLIC_HOST: ${{ github.event.inputs.public_host || 'https://edge-production-cc0fa50a.up.railway.app' }}
   TAG: ${{ github.event.inputs.tag || 'v2025.07-1' }}
   REGISTRY: ghcr.io/thioye97
 
@@ -36,6 +40,7 @@ jobs:
   # The three Rust images are independent build graphs; running them on
   # separate runners trades duplicated dependency compilation for wall-clock.
   cloud:
+    if: inputs.only == '' || contains(format(',{0},', inputs.only), ',cloud,')
     runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
@@ -55,6 +60,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=cloud
 
   worker:
+    if: inputs.only == '' || contains(format(',{0},', inputs.only), ',worker,')
     runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
@@ -75,6 +81,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=worker
 
   admin:
+    if: inputs.only == '' || contains(format(',{0},', inputs.only), ',admin,')
     runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
@@ -95,6 +102,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=admin
 
   web:
+    if: inputs.only == '' || contains(format(',{0},', inputs.only), ',web,')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -127,6 +135,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=web
 
   edge:
+    if: inputs.only == '' || contains(format(',{0},', inputs.only), ',edge,')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
