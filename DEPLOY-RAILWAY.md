@@ -33,7 +33,30 @@ Services volontairement écartés : `minio` (remplacé par le bucket Railway),
 `ai` et `appflowy_search` (absents de cette version du code, ou dépendants
 d'une clé OpenAI), `pgadmin`.
 
+Compte Railway : `app@danapay.com`, workspace « danapay's Projects », projet
+`appflowy-maison` (`4590bbda-717d-404e-be06-e74754f99f73`). Les services sont
+en `europe-west4` et le bucket en `ams`.
+
 ## Contraintes à connaître
+
+**Railway injecte `PORT=8080`.** L'edge le respecterait et écouterait sur 8080,
+alors que le domaine route vers 80 — d'où un 502 sur toutes les routes. On fixe
+donc `PORT=80` explicitement sur le service `edge`.
+
+**Le réseau privé est résolu en IPv6** (`fd12::10`). Tout service joignable par
+l'edge doit écouter en IPv6 : `APPFLOWY_APPLICATION_HOST=[::]`,
+`ADMIN_FRONTEND_HOST=[::]`, et `listen [::]:80` dans `docker/web/nginx.conf`.
+GoTrue écoute sur `:9999`, ce qui est dual-stack en Go.
+
+**Le stockage Tigris accepte le path-style.** Vérifié : écriture puis relecture
+d'un blob via `PUT`/`GET /api/file_storage/{ws}/blob/{id}` rendent le contenu
+exact. C'était le point le plus incertain de la configuration, puisque le code
+force `force_path_style(true)` alors que Railway annonce ses buckets en
+virtual-host.
+
+**Pièges du CLI en non-interactif.** `railway volume add` plante
+(`Option::unwrap()` sur `None`) si aucun service n'est lié : faire
+`railway service <nom>` d'abord. `railway bucket create` exige `--region`.
 
 **L'URL publique est figée dans l'image web.** Vite résout `import.meta.env` au
 build, donc `AF_BASE_URL` / `AF_GOTRUE_URL` / `AF_WS_URL` sont des build-args.
@@ -69,12 +92,23 @@ gh workflow run build-images.yml \
   -f tag=v2025.07-1
 ```
 
+Seule l'image web dépend du domaine. Après un changement d'URL, inutile de
+relancer les trois compilations Rust — l'entrée `only` restreint le run :
+
+```bash
+gh workflow run build-images.yml -f public_host=https://<nouvelle-url> -f only=web
+```
+
 Les paquets GHCR doivent ensuite être rendus **publics**, sinon Railway ne peut
 pas les tirer (les identifiants de registre privé se configurent uniquement
 depuis le tableau de bord Railway).
 
-## Après le premier déploiement
+## État actuel
 
-1. Créer le compte depuis la page de connexion.
-2. Passer `GOTRUE_DISABLE_SIGNUP=true` sur le service `gotrue` pour fermer les
-   inscriptions — l'instance est publique sur Internet.
+Le compte propriétaire est créé et `GOTRUE_DISABLE_SIGNUP=true` est actif : une
+tentative d'inscription renvoie `signup_disabled`. Pour ajouter quelqu'un, il
+faut repasser temporairement la variable à `false`, ou inviter depuis l'espace
+de travail.
+
+Les identifiants vivent dans `.secrets.local`, ignoré par git. Ils ne sont
+nulle part dans l'historique du dépôt.
